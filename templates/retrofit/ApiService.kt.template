@@ -1,0 +1,23 @@
+// Template: Retrofit API service. Replace `Feature` and endpoints per the spec.
+// suspend functions (native Retrofit support) — never return Call<T>.
+package com.example.generatedapp.data.remote.api
+
+import com.example.generatedapp.data.remote.dto.FeatureDto
+import retrofit2.http.*
+
+interface FeatureApi {
+
+    @GET("features")
+    suspend fun getFeatures(
+        @Query("page") page: Int = 1,
+    ): List<FeatureDto>
+
+    @GET("features/{id}")
+    suspend fun getFeature(@Path("id") id: Long): FeatureDto
+
+    @POST("features")
+    suspend fun createFeature(@Body body: FeatureDto): FeatureDto
+
+    @DELETE("features/{id}")
+    suspend fun deleteFeature(@Path("id") id: Long)
+}

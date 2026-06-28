@@ -1,0 +1,40 @@
+// Template: offline-first repository combining Room (source of truth) + remote.
+// Implements the domain interface; UI observes Room, refresh() pulls remote.
+package com.example.generatedapp.data.repository
+
+import com.example.generatedapp.data.local.FeatureDao
+import com.example.generatedapp.data.local.toDomain
+import com.example.generatedapp.data.local.toEntity
+import com.example.generatedapp.data.remote.FeatureRemoteDataSource
+import com.example.generatedapp.data.remote.NetworkResult
+import com.example.generatedapp.domain.model.Feature
+import com.example.generatedapp.domain.repository.FeatureRepository
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+class FeatureRepositoryImpl @Inject constructor(
+    private val dao: FeatureDao,
+    private val remote: FeatureRemoteDataSource,
+) : FeatureRepository {
+
+    // Single source of truth: the UI always reads from the local DB.
+    override fun observeAll(): Flow<List<Feature>> =
+        dao.observeAll().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun getById(id: Long): Feature? = dao.getById(id)?.toDomain()
+
+    override suspend fun upsert(feature: Feature) = dao.upsert(feature.toEntity())
+
+    override suspend fun delete(id: Long) = dao.delete(id)
+
+    // Pull from network and cache; the observed Flow re-emits automatically.
+    suspend fun refresh(): NetworkResult<Unit> =
+        when (val result = remote.fetchFeatures()) {
+            is NetworkResult.Success -> {
+                dao.upsertAll(result.data.map { it.toEntity() })
+                NetworkResult.Success(Unit)
+            }
+            is NetworkResult.Error -> result
+        }
+}

@@ -1,0 +1,27 @@
+// Template: a network DTO. Mirrors the JSON shape ONLY.
+// Distinct from the Room @Entity and the domain model — map at the boundary.
+package com.example.generatedapp.data.remote.dto
+
+import com.example.generatedapp.domain.model.Feature
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class FeatureDto(
+    @SerialName("id") val id: Long = 0,
+    @SerialName("title") val title: String,
+    @SerialName("is_done") val isDone: Boolean = false,
+)
+
+// Mapping lives at the boundary so DTOs never reach a ViewModel.
+fun FeatureDto.toDomain(): Feature = Feature(
+    id = id,
+    title = title,
+    isDone = isDone,
+)
+
+fun Feature.toDto(): FeatureDto = FeatureDto(
+    id = id,
+    title = title,
+    isDone = isDone,
+)

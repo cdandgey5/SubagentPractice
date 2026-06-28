@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization) // only when the app uses networking
 }
 
 android {
@@ -62,6 +63,13 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
+
+    // Networking — include only when the app talks to a remote API.
+    implementation(libs.retrofit)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.retrofit.kotlinx.serialization.converter)
 
     testImplementation(libs.junit)
     testImplementation(libs.truth)

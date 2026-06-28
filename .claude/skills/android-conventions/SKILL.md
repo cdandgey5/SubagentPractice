@@ -20,7 +20,7 @@ should conform to this so independently generated layers fit together.
 
 ## Packages
 ```
-<pkg>.di | data.local | data.repository | data.model
+<pkg>.di | data.local | data.remote | data.repository | data.model
         | domain.model | domain.repository
         | ui.theme | ui.navigation | ui.<feature> | ui.components
 ```
@@ -44,6 +44,18 @@ should conform to this so independently generated layers fit together.
 ## Persistence
 - Room via KSP. Entities never leave the repository; map to domain models.
 - `Flow<List<T>>` for reactive reads; `suspend fun` for writes.
+
+## Networking
+- Retrofit + OkHttp + **kotlinx.serialization** (not Gson/Moshi). `suspend`
+  functions on API interfaces; never return `Call<T>`.
+- **Three distinct model types:** DTO (network) ≠ Entity (Room) ≠ domain model.
+  Map at the boundaries; a DTO must never reach a ViewModel.
+- Wrap calls in a `NetworkResult` sealed type; catch `IOException` and
+  `HttpException` in the remote data source so the UI never sees raw exceptions.
+- Offline-first when the app persists data: Room is the single source of truth;
+  the UI observes Room, and `refresh()` pulls remote and upserts into the DB.
+- `OkHttpClient`, `Retrofit`, base URL, timeouts, and a debug-only logging
+  interceptor live in `NetworkModule`. Declare the `INTERNET` permission.
 
 ## DI
 - Hilt. `@HiltAndroidApp` app, `@AndroidEntryPoint` activity,

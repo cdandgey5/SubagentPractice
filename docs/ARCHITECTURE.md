@@ -22,9 +22,12 @@ flowchart LR
 |-------|-------|-------|--------|
 | 1. Plan | orchestrator | user prompt | `PROJECT_SPEC` |
 | 2. Architect | architect | `PROJECT_SPEC` | package tree + contracts |
-| 3. Generate | build / data / ui / test | spec + contracts | layer code |
+| 3. Generate | build / data / network* / ui / test | spec + contracts | layer code |
 | 4. Integrate | orchestrator | all layer code | wired project |
 | 5. Review | reviewer | wired project | fixes + report |
+| 6. CI* | ci-engineer | wired project | GitHub Actions workflow |
+
+\* network = only when the prompt implies remote data; CI = optional.
 
 ---
 
@@ -73,12 +76,15 @@ flowchart TD
     O -->|Agent tool| A[architect]
     O -->|Agent tool, parallel| B[build-engineer]
     O -->|Agent tool, parallel| D[data-engineer]
+    O -->|Agent tool, parallel, if remote| N[network-engineer]
     O -->|Agent tool, parallel| C[ui-composer]
     O -->|Agent tool, parallel| T[test-engineer]
     O -->|Agent tool| R[reviewer]
+    O -->|Agent tool, optional| CI[ci-engineer]
     A -.returns contracts.-> O
-    B & D & C & T -.return code.-> O
+    B & D & N & C & T -.return code.-> O
     R -.returns report.-> O
+    CI -.returns workflow.-> O
 ```
 
 Only the orchestrator uses the `Agent` tool. Specialists have file + search tools
@@ -118,16 +124,24 @@ flowchart TB
         REPO[Repository interface]
         MODEL[Domain model]
     end
-    subgraph DATA [data layer - Android/Room]
+    subgraph DATA [data layer - Android/Room + Retrofit]
         IMPL[RepositoryImpl] --> DAO[DAO]
         DAO --> DB[(Room database)]
         IMPL -->|maps Entity to Model| ENT[Entity]
+        IMPL --> RDS[RemoteDataSource]
+        RDS --> API[Retrofit API]
+        RDS -->|maps DTO to Model| DTO[DTO]
+        API --> NET[(Remote server)]
     end
     VM -->|injected| REPO
     IMPL -->|implements| REPO
     VM --> MODEL
     IMPL --> MODEL
 ```
+
+Networking, when present, sits *inside* the data layer behind the same
+repository. The UI and domain are unchanged whether data is local-only,
+remote-only, or offline-first.
 
 **Dependency rule:** arrows of dependency point inward to `domain`. The UI and
 data layers depend on domain interfaces; domain depends on nothing Android.
@@ -205,6 +219,41 @@ flowchart TD
 ```
 
 ---
+
+## 9b. Networking data flow (offline-first)
+
+```mermaid
+flowchart LR
+    UI[Screen observes] --> VM[ViewModel]
+    VM --> REPO[Repository.observeAll]
+    REPO --> ROOM[(Room: source of truth)]
+    VM -->|refresh| REPO2[Repository.refresh]
+    REPO2 --> RDS[RemoteDataSource]
+    RDS --> API[Retrofit API]
+    API --> SRV[(Server)]
+    RDS -->|map DTO->domain| REPO2
+    REPO2 -->|upsert| ROOM
+    ROOM -->|Flow re-emits| VM
+```
+
+## 9c. CI pipeline (GitHub Actions)
+
+```mermaid
+flowchart TD
+    TRIG[push / pull_request on main] --> CHK[actions/checkout@v4]
+    CHK --> JDK[setup-java: Temurin 17]
+    JDK --> GR[setup-gradle: cache deps]
+    GR --> X[chmod +x ./gradlew]
+    X --> ASM[./gradlew assembleDebug]
+    ASM --> UT[./gradlew testDebugUnitTest]
+    UT --> LINT[./gradlew lintDebug]
+    LINT --> OK{all green?}
+    OK -->|yes| PASS([✅ status check passes])
+    OK -->|no| ART[upload reports artifact] --> FAIL([❌ blocks merge])
+```
+
+The wrapper must be committed (CI has no global Gradle), and PR jobs stay fast by
+deferring emulator/instrumented tests to a separate optional job.
 
 ## 10. Extending the system
 

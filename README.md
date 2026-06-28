@@ -19,19 +19,22 @@ an orchestrator — exactly the pattern Claude Code is built for.
 ```
 .
 ├── .claude/
-│   ├── agents/                 # 7 subagents (the workers + the coordinator)
+│   ├── agents/                 # 9 subagents (the workers + the coordinator)
 │   │   ├── android-orchestrator.md
 │   │   ├── android-architect.md
 │   │   ├── android-build-engineer.md
 │   │   ├── android-data-engineer.md
+│   │   ├── android-network-engineer.md
 │   │   ├── android-ui-composer.md
 │   │   ├── android-test-engineer.md
+│   │   ├── android-ci-engineer.md
 │   │   └── android-code-reviewer.md
-│   └── skills/                 # 5 skills (the command surface)
+│   └── skills/                 # 6 skills (the command surface)
 │       ├── generate-android-app/SKILL.md   # full app from a prompt
 │       ├── android-scaffold/SKILL.md       # empty buildable shell
 │       ├── compose-screen/SKILL.md         # add one screen
 │       ├── gradle-setup/SKILL.md           # fix/create build config
+│       ├── setup-ci/SKILL.md               # add GitHub Actions CI
 │       └── android-conventions/SKILL.md    # the shared rulebook
 ├── templates/                  # known-good Gradle + Kotlin reference files
 │   ├── settings.gradle.kts
@@ -39,7 +42,9 @@ an orchestrator — exactly the pattern Claude Code is built for.
 │   ├── root.build.gradle.kts
 │   ├── app.build.gradle.kts
 │   ├── AndroidManifest.xml
-│   └── kotlin/                 # MVVM screen / viewmodel / contract templates
+│   ├── kotlin/                 # MVVM screen / viewmodel / contract templates
+│   ├── retrofit/               # API service / DTO / NetworkModule / offline-first repo
+│   └── ci/                     # GitHub Actions workflow
 ├── docs/
 │   ├── ARCHITECTURE.md         # how the pipeline works (diagrams)
 │   └── WHY.md                  # why it's designed this way (diagrams)
@@ -58,8 +63,10 @@ an orchestrator — exactly the pattern Claude Code is built for.
 | **android-architect** | Module layout, package tree, **contracts** | opus | Decisions made once, up front, bind everyone else |
 | **android-build-engineer** | Gradle, version catalog, manifest | sonnet | Build/version compatibility is a deep, narrow specialty |
 | **android-data-engineer** | Room entities, DAOs, repositories | sonnet | Persistence has its own idioms and failure modes |
+| **android-network-engineer** | Retrofit API, DTOs, NetworkModule, offline-first | sonnet | Networking, serialization & error handling are their own domain |
 | **android-ui-composer** | Compose screens, ViewModels, nav, theme | sonnet | UI is the largest surface; isolate its big context |
 | **android-test-engineer** | Unit + instrumented tests | sonnet | Tests should be written against contracts, not by the author |
+| **android-ci-engineer** | GitHub Actions: build + test + lint on every push | sonnet | Automated proof a generated app compiles |
 | **android-code-reviewer** | Final cross-layer quality gate | opus | A fresh reviewer catches what an author can't |
 
 ### Skills (`.claude/skills/`)
@@ -70,6 +77,7 @@ an orchestrator — exactly the pattern Claude Code is built for.
 | **android-scaffold** | You want just an empty, buildable shell |
 | **compose-screen** | You want to add one screen to an existing app |
 | **gradle-setup** | The build is broken or missing |
+| **setup-ci** | You want GitHub Actions to build/test the app on every push |
 | **android-conventions** | You need the shared rules every agent follows |
 
 ---
@@ -99,11 +107,14 @@ flowchart LR
     A -->|contracts| O
     O --> B[android-build-engineer]
     O --> D[android-data-engineer]
+    O --> N[android-network-engineer<br/>if remote data]
     O --> C[android-ui-composer]
     O --> T[android-test-engineer]
-    B & D & C & T --> O
+    B & D & N & C & T --> O
     O --> R[android-code-reviewer]
     R --> APP([Buildable Android app])
+    APP --> CI[android-ci-engineer<br/>optional]
+    CI --> GREEN([Green CI on every push])
 ```
 
 Read **`docs/WHY.md`** for the reasoning behind every design choice (with lots of

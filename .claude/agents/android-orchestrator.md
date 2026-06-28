@@ -38,11 +38,13 @@ delegating** — not by writing every file yourself.
 ## The pipeline
 
 ```
-prompt ─► [1] plan ─► [2] architect ─► [3a] data ─┐
-                                       [3b] build ─┼─► [4] integrate ─► [5] review
-                                       [3c] ui   ─┘                        │
-                                       [3d] tests                          ▼
-                                                                       buildable app
+prompt ─► [1] plan ─► [2] architect ─► [3a] data    ─┐
+                                       [3b] build    ─┤
+                                       [3c] network* ─┼─► [4] integrate ─► [5] review ─► [6] CI*
+                                       [3d] ui       ─┤                        │            │
+                                       [3e] tests    ─┘                        ▼            ▼
+                                                                          buildable app + green CI
+            * network = only if remote data; CI = optional GitHub Actions
 ```
 
 Stages 3a–3d are independent and can be dispatched **in parallel** once the
@@ -71,8 +73,16 @@ Dispatch in one batch, each with the `PROJECT_SPEC` **and** the architect's
 contracts:
 - `android-build-engineer` → Gradle files, manifest, version catalog, deps.
 - `android-data-engineer` → entities, DAOs, database, repositories.
+- `android-network-engineer` → **only if the prompt implies remote data**
+  (login, sync, feeds, search, weather, etc.): Retrofit API, DTOs, NetworkModule,
+  remote data source, offline-first repository wiring.
 - `android-ui-composer` → Compose screens, view models, navigation, theme.
 - `android-test-engineer` → unit + instrumented tests for the above.
+
+> Deciding on networking: scan the prompt for any data the app cannot produce on
+> the device alone. If found, include the network engineer and tell the build
+> engineer to add Retrofit/OkHttp/serialization deps + the serialization plugin.
+> If the app is purely local (a timer, a local notes app), skip it entirely.
 
 ### 4. Integrate
 Resolve any cross-cutting gaps (wiring Hilt modules, hooking nav to screens,
@@ -82,6 +92,12 @@ yourself with `Edit`.
 ### 5. Review
 Call `android-code-reviewer` on the final tree. Apply any blocking fixes it
 reports, then summarize what was generated for the user.
+
+### 6. CI (optional but recommended)
+If the user wants automated proof the app builds, delegate to
+`android-ci-engineer` to add `.github/workflows/android-ci.yml`. Ensure the
+Gradle wrapper is committed first. This turns "it compiles" into a recorded fact
+on every push/PR rather than a claim.
 
 ## Output to the user
 

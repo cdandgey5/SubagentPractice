@@ -1,0 +1,31 @@
+// Template: thin wrapper over the API that centralizes error handling and
+// returns domain-friendly results. The repository uses this, not the API directly.
+package com.example.generatedapp.data.remote
+
+import com.example.generatedapp.data.remote.api.FeatureApi
+import com.example.generatedapp.data.remote.dto.toDomain
+import com.example.generatedapp.domain.model.Feature
+import java.io.IOException
+import javax.inject.Inject
+import retrofit2.HttpException
+
+sealed interface NetworkResult<out T> {
+    data class Success<T>(val data: T) : NetworkResult<T>
+    data class Error(val message: String, val code: Int? = null) : NetworkResult<Nothing>
+}
+
+class FeatureRemoteDataSource @Inject constructor(
+    private val api: FeatureApi,
+) {
+    suspend fun fetchFeatures(): NetworkResult<List<Feature>> = safeCall {
+        api.getFeatures().map { it.toDomain() }
+    }
+
+    private inline fun <T> safeCall(block: () -> T): NetworkResult<T> = try {
+        NetworkResult.Success(block())
+    } catch (e: HttpException) {
+        NetworkResult.Error(e.message ?: "HTTP error", e.code())
+    } catch (e: IOException) {
+        NetworkResult.Error("No network connection")
+    }
+}
