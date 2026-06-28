@@ -1,0 +1,44 @@
+// Template: a ViewModel following the pipeline's MVVM convention.
+// Depends ONLY on the domain repository interface (Hilt-injected), never on Room.
+package com.example.generatedapp.ui.feature
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.generatedapp.domain.repository.FeatureRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+data class FeatureUiState(
+    val isLoading: Boolean = false,
+    val items: List<String> = emptyList(),
+    val error: String? = null,
+)
+
+@HiltViewModel
+class FeatureViewModel @Inject constructor(
+    private val repository: FeatureRepository,
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(FeatureUiState(isLoading = true))
+    val uiState: StateFlow<FeatureUiState> = _uiState.asStateFlow()
+
+    init { observe() }
+
+    private fun observe() {
+        viewModelScope.launch {
+            repository.observeAll()
+                .catch { e -> _uiState.update { it.copy(isLoading = false, error = e.message) } }
+                .collect { data ->
+                    _uiState.update {
+                        it.copy(isLoading = false, items = data.map(::render), error = null)
+                    }
+                }
+        }
+    }
+
+    fun refresh() = observe()
+
+    private fun render(item: Any): String = item.toString()
+}

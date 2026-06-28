@@ -1,0 +1,17 @@
+# Android / Gradle artifacts produced by generated projects
+*.iml
+.gradle/
+local.properties
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+!debug.keystore
+
+# OS / editor
+.DS_Store
+*.swp

@@ -1,0 +1,54 @@
+// Template: a feature screen following the pipeline's MVVM convention.
+// Subagents copy this shape; replace `Feature` with the screen name.
+package com.example.generatedapp.ui.feature
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+@Composable
+fun FeatureScreen(
+    viewModel: FeatureViewModel = hiltViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    FeatureContent(
+        uiState = uiState,
+        onRefresh = viewModel::refresh,
+    )
+}
+
+// Stateless + hoisted so it is previewable and testable.
+@Composable
+private fun FeatureContent(
+    uiState: FeatureUiState,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        when {
+            uiState.isLoading -> CircularProgressIndicator()
+            uiState.error != null -> Text(uiState.error)
+            uiState.items.isEmpty() -> Text("Nothing here yet")
+            else -> Column(Modifier.padding(16.dp)) {
+                uiState.items.forEach { Text(it) }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun FeatureScreenPreview() {
+    MaterialTheme {
+        FeatureContent(
+            uiState = FeatureUiState(items = listOf("Sample A", "Sample B")),
+            onRefresh = {},
+        )
+    }
+}

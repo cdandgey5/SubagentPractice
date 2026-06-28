@@ -1,0 +1,14 @@
+// Template: the domain contract the architect writes and both data + UI build on.
+// Pure Kotlin: no Android imports, no Room imports. This is the seam that lets
+// the data-engineer and ui-composer subagents work independently and still fit.
+package com.example.generatedapp.domain.repository
+
+import com.example.generatedapp.domain.model.Feature
+import kotlinx.coroutines.flow.Flow
+
+interface FeatureRepository {
+    fun observeAll(): Flow<List<Feature>>
+    suspend fun getById(id: Long): Feature?
+    suspend fun upsert(feature: Feature)
+    suspend fun delete(id: Long)
+}
